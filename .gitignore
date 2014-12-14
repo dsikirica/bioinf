@@ -1,0 +1,2 @@
+build/release/out
+build/object/*.o
