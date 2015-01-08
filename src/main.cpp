@@ -1,6 +1,6 @@
 #include <cstdio>
 
-#include "lcp.h"
+#include "lcp.hpp"
 
 int main(int argc, char **argv) {
 	test();
