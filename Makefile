@@ -21,3 +21,5 @@ clean:
 
 run:
 	./build/release/out
+
+build_and_run: all run

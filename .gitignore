@@ -1,2 +1,4 @@
 build/release/out
 build/object/*.o
+*.doc#
+CMakeLists.txt
