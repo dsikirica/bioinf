@@ -66,15 +66,62 @@ struct Name {
 	int index;
 	string name;
 	
-	Name() {
-		index = -1;
-	}
+	int lcp;
 	
 	Name(int _index, string _name) {
 		index = _index;
 		name = _name;
+		lcp = -1;
+	}
+	
+	string getSuffix(string& input) {
+		return input.substr(index);
+	}
+	
+	int suffixLCP(Name& n, string& input) {
+		int len = min(name.length(), n.name.length());
+		for (int i = 0; i < len; i++) {
+			if (name[i] != n.name[i]) {
+				return i;
+			}
+		}
+		return len;
 	}
 };
+
+int lcp(const string& a, const string& b) {
+	int len = min(a.length(), b.length());
+	for (int i = 0; i < len; i++) {
+		if (a[i] != b[i]) {
+			return i;
+		}
+	}
+	return len;
+}
+
+struct NameComparator {
+	string& input;
+	
+	NameComparator(string& _input) : input(_input) {
+	}
+	
+	bool operator()(const Name& a, const Name& b) {
+		int i = a.index;
+		int j = b.index;
+		int n = input.length();
+		while (i < n && j < n) {
+			if (input[i] < input[j]) {
+				return true;
+			} else if (input[i] > input[j]) {
+				return false;
+			}
+			i++;
+			j++;
+		}
+		return true;
+	}
+};
+
 
 vector<SuffixType> createSuffixTypeArray(string input) {
 	const int n = input.length();
@@ -197,7 +244,6 @@ void addSSuffixes(vector<Bucket>& buckets, vector<SuffixType>& types, string& in
 	}
 }
 
-/* 3. */
 string getName(int index, string& in, vector<SuffixType> types) {
 	string ret;
 	ret += in[index];
@@ -210,6 +256,7 @@ string getName(int index, string& in, vector<SuffixType> types) {
 	return ret;
 }
 
+/* 3. */
 vector<Name> getNames(vector<Bucket>& buckets, vector<SuffixType>& types, string& input) {
 	vector<Name> names;
 	
@@ -229,11 +276,58 @@ vector<Name> getNames(vector<Bucket>& buckets, vector<SuffixType>& types, string
 	return names;
 }
 
+typedef vector<Name> Names;
+
+/* 3.1) */
+vector<Names> getCategories(vector<Name>& names) {
+	vector<Names> categories;
+	vector<Name> first;
+	first.push_back(names[0]);
+	categories.push_back(first);
+	
+	int category = 0;
+	for (int i = 1; i < (int)names.size(); i++) {
+		if (names[i].name != names[i-1].name) {
+			vector<Name> newCategory;
+			categories.push_back(newCategory);
+			category++;
+		}
+		categories[category].push_back(names[i]);
+	}
+	
+	return categories;
+}
+
+vector<Name> flatten(vector<Names>& categories, string& input) {
+	NameComparator nameComparator(input);
+	vector<Name> names;
+	
+	for (vector<Names>::iterator it = categories.begin(); it != categories.end(); ++it) {
+		if (it->size() > 1) {
+			sort(it->begin(), it->end(), nameComparator);
+		}
+		for (vector<Name>::iterator name = it->begin(); name != it->end(); ++name) {
+			names.push_back(*name);
+		}
+	}
+	
+	return names;
+}
+
+void lcpInitial(vector<Name>& names, string& input) {
+	names[0].lcp = 0;
+	for (int i = 1; i < (int)names.size(); i++) {
+		names[i].lcp = names[i].suffixLCP(names[i-1], input);
+	}
+}
+
 void test1(string&);
 void test2(string&);
 
 void test() {
-	string input = "otorinolaringologija$";
+	//string input = "otorinolaringologija$";
+	string input = "aralralraralkapalkar$";
+	
 	test2(input);
 }
 
@@ -249,15 +343,13 @@ void test2(string& input) {
 	addSStarSuffix(buckets, types, input);
 	addLSuffixes(buckets, types, input);
 	addSSuffixes(buckets, types, input);
-	vector<Name> names = getNames(buckets, types, input);
-	
-	//cout << input << endl;
-	//for (vector<Bucket>::iterator it = buckets.begin(); it != buckets.end(); ++it) {
-	//	it->print();
-	//}
+	vector<Name> unsortedNames = getNames(buckets, types, input);
+	vector<Names> categories = getCategories(unsortedNames);
+	vector<Name> names = flatten(categories, input);
+	lcpInitial(names, input);
 	
 	for (vector<Name>::iterator it = names.begin(); it != names.end(); ++it) {
-		printf("%d %s\n", it->index, it->name.c_str());
+		printf("%d %s %s %d\n", it->index, it->name.c_str(), it->getSuffix(input).c_str(), it->lcp);
 	}
 }
 
