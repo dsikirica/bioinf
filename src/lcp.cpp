@@ -63,14 +63,20 @@ struct Bucket {
 	}
 	
 	void putBack(BucketElement element) {
-		elements[tail] = element;
-		suffixIndexToElementIndex[element.suffixIndex] = tail;
+		if (tail < 0) {
+			throw string("putBack: bucket is full");
+		}
+		elements.at(tail) = element;
+		suffixIndexToElementIndex.at(element.suffixIndex) = tail;
 		tail--;
 	}
 	
 	void putFront(BucketElement element) {
-		elements[head] = element;
-		suffixIndexToElementIndex[element.suffixIndex] = head;
+		if (head >= (int)elements.size()) {
+			throw string("putFront: bucket is full");
+		}
+		elements.at(head) = element;
+		suffixIndexToElementIndex.at(element.suffixIndex) = head;
 		head++;
 	}
 	
@@ -79,7 +85,7 @@ struct Bucket {
 	}
 	
 	int find(int suffixIndex) {
-		return suffixIndexToElementIndex[suffixIndex];
+		return suffixIndexToElementIndex.at(suffixIndex);
 	}
 	
 	void print() {
@@ -123,7 +129,7 @@ struct Name {
 	int suffixLCP(Name& n, string& input) {
 		int len = min(name.length(), n.name.length());
 		for (int i = 0; i < len; i++) {
-			if (name[i] != n.name[i]) {
+			if (name.at(i) != n.name.at(i)) {
 				return i;
 			}
 		}
@@ -137,7 +143,7 @@ struct Name {
 int lcp(const string& a, const string& b) {
 	int len = min(a.length(), b.length());
 	for (int i = 0; i < len; i++) {
-		if (a[i] != b[i]) {
+		if (a.at(i) != b.at(i)) {
 			return i;
 		}
 	}
@@ -158,9 +164,9 @@ struct NameComparator {
 		int j = b.index;
 		int n = input.length();
 		while (i < n && j < n) {
-			if (input[i] < input[j]) {
+			if (input.at(i) < input.at(j)) {
 				return true;
-			} else if (input[i] > input[j]) {
+			} else if (input.at(i) > input.at(j)) {
 				return false;
 			}
 			i++;
@@ -176,18 +182,18 @@ struct NameComparator {
 vector<SuffixType> createSuffixTypeArray(string input) {
 	const int n = input.length();
 	vector<SuffixType> types(n);
-	types[n-1] = S;
+	types.at(n-1) = S;
 	
 	for (int i = n-2; i >= 0; i--) {
-		if (input[i] < input[i+1]) {
-			types[i] = S;
-		} else if (input[i] > input[i+1]) {
-			types[i] = L;
-			if (types[i+1] == S) {
-				types[i+1] = S_star;
+		if (input.at(i) < input.at(i+1)) {
+			types.at(i) = S;
+		} else if (input.at(i) > input.at(i+1)) {
+			types.at(i) = L;
+			if (types.at(i+1) == S) {
+				types.at(i+1) = S_star;
 			}
 		} else {
-			types[i] = types[i+1];
+			types.at(i) = types.at(i+1);
 		}
 	}
 	
@@ -203,7 +209,7 @@ string distinctLetters(string& str) {
 	sort(chars.begin(), chars.end());
 	unsigned int i = 0;
 	while (i < chars.size() - 1) {
-		if (chars[i] == chars[i+1]) {
+		if (chars.at(i) == chars.at(i+1)) {
 			chars.erase(chars.begin() + i);
 		} else {
 			i++;
@@ -251,15 +257,18 @@ Bucket& getBucket(vector<Bucket>& buckets, char letter) {
 			return *it;
 		}
 	}
-	throw "Could not find bucket with letter " + letter;
+	string msg = "Could not find bucket with letter ";
+	msg += letter;
+	throw msg;
 }
+
 
 /* 2.1) */
 void addSStarSuffix(vector<Bucket>& buckets, vector<SuffixType>& types, string& input) {
 	for (unsigned int i = 0; i < input.length(); i++) {
-		if (types[i] == S_star) {
-			Bucket& bucket = getBucket(buckets, input[i]);
-			BucketElement element(i, types[i]);
+		if (types.at(i) == S_star) {
+			Bucket& bucket = getBucket(buckets, input.at(i));
+			BucketElement element(i, types.at(i));
 			bucket.putBack(element);
 		} 
 	}
@@ -274,9 +283,9 @@ void addLSuffixes(vector<Bucket>& buckets, vector<SuffixType>& types, string& in
 			BucketElement& element = elements.at(j);
 			if (element.suffixIndex > 0) {
 				int index = element.suffixIndex - 1;	
-				if (types[index] == L) {
-					Bucket& into = getBucket(buckets, input[index]);
-					BucketElement newElement(index, types[index]);
+				if (types.at(index) == L) {
+					Bucket& into = getBucket(buckets, input.at(index));
+					BucketElement newElement(index, types.at(index));
 					into.putFront(newElement);
 				}
 			}
@@ -297,9 +306,9 @@ void addSSuffixes(vector<Bucket>& buckets, vector<SuffixType>& types, string& in
 			BucketElement& element = elements.at(j);
 			if (element.suffixIndex > 0) {
 				int index = element.suffixIndex - 1;
-				if (types[index] == S || types[index] == S_star) {
-					Bucket& into = getBucket(buckets, input[index]);
-					BucketElement newElement(index, types[index]);
+				if (types.at(index) == S || types.at(index) == S_star) {
+					Bucket& into = getBucket(buckets, input.at(index));
+					BucketElement newElement(index, types.at(index));
 					into.putBack(newElement);
 				}
 			}
@@ -309,10 +318,10 @@ void addSSuffixes(vector<Bucket>& buckets, vector<SuffixType>& types, string& in
 
 string getName(int index, string& in, vector<SuffixType> types) {
 	string ret;
-	ret += in[index];
+	ret += in.at(index);
 	for (unsigned int i = index; i < in.length()-1; i++) {
-		ret += in[i+1];
-		if (types[i+1] == S_star) {
+		ret += in.at(i+1);
+		if (types.at(i+1) == S_star) {
 			break;
 		}
 	}
@@ -328,9 +337,9 @@ vector<Name> getNames(vector<Bucket>& buckets, vector<SuffixType>& types, string
 		vector<BucketElement>& elements = bucket.elements;
 		
 		for (unsigned int j = 0; j < elements.size(); j++) {
-			if (elements[j].type == S_star) {
-				string name = getName(elements[j].suffixIndex, input, types);
-				Name chName(elements[j].suffixIndex, name);
+			if (elements.at(j).type == S_star) {
+				string name = getName(elements.at(j).suffixIndex, input, types);
+				Name chName(elements.at(j).suffixIndex, name);
 				names.push_back(chName);
 			}
 		}
@@ -345,17 +354,17 @@ typedef vector<Name> Names;
 vector<Names> getCategories(vector<Name>& names) {
 	vector<Names> categories;
 	vector<Name> first;
-	first.push_back(names[0]);
+	first.push_back(names.at(0));
 	categories.push_back(first);
 	
 	int category = 0;
 	for (int i = 1; i < (int)names.size(); i++) {
-		if (names[i].name != names[i-1].name) {
+		if (names.at(i).name != names.at(i-1).name) {
 			vector<Name> newCategory;
 			categories.push_back(newCategory);
 			category++;
 		}
-		categories[category].push_back(names[i]);
+		categories.at(category).push_back(names.at(i));
 	}
 	
 	return categories;
@@ -379,43 +388,46 @@ vector<Name> flatten(vector<Names>& categories, string& input) {
 
 /* 3.2) */
 void lcpInitial(vector<Name>& names, string& input) {
-	names[0].lcp = 0;
+	names.at(0).lcp = 0;
 	for (int i = 1; i < (int)names.size(); i++) {
-		names[i].lcp = names[i].suffixLCP(names[i-1], input);
+		names.at(i).lcp = names.at(i).suffixLCP(names.at(i-1), input);
 	}
 }
 
 /* 4.1) Inserts S* suffixes into buckets. */
 void lastStepSStar(vector<Bucket>& buckets, vector<Name>& names, vector<SuffixType>& types, string& input) {
 	for (int j = (int)names.size()-1; j >= 0; j--) {
-		Name& name = names[j];
+		Name& name = names.at(j);
 		int i = name.index;
-		if (types[i] == S_star) {
-			Bucket& bucket = getBucket(buckets, input[i]);
-			BucketElement element(i, types[i], name.lcp);
+		if (types.at(i) == S_star) {
+			Bucket& bucket = getBucket(buckets, input.at(i));
+			BucketElement element(i, types.at(i), name.lcp);
 			bucket.putBack(element);
 		}
 	}
 }
 
 void insertNotFirstL(int index, vector<Bucket>& buckets, Bucket& bucket, vector<SuffixType>& types, string& input) {
-	BucketElement elem(index, types[index], 0);
+	BucketElement elem(index, types.at(index), 0);
 				
-	BucketElement& prevL = bucket.elements[bucket.head - 1];
-	int suffixA = min(index+1, prevL.suffixIndex+1);
-	int suffixB = max(index+1, prevL.suffixIndex+1);
+	BucketElement& prevL = bucket.elements.at(bucket.head-1);
+	int suffixA = elem.suffixIndex + 1;
+	int suffixB = prevL.suffixIndex + 1;
 	
-	if (input[suffixA] == input[suffixB]) {
-		Bucket& bucketForSuffix = getBucket(buckets, suffixA);
-		int begin = 1 + bucketForSuffix.find(suffixA);
-		int end = bucketForSuffix.find(suffixB);
+	if (input.at(suffixA) == input.at(suffixB)) {
+		Bucket& bucketForSuffix = getBucket(buckets, input[suffixA]);
+		int indexA = bucketForSuffix.find(suffixA);
+		int indexB = bucketForSuffix.find(suffixB);
+		int begin = 1 + min(indexA, indexB);
+		int end = max(indexA, indexB);
 		int minLcp = 1000000000;
 		for (; begin <= end; begin++) {
-			BucketElement& element = bucketForSuffix.elements[begin];
+			BucketElement& element = bucketForSuffix.elements.at(begin);
 			if (element.lcp < minLcp) {
 				minLcp = element.lcp;
 			}
 		}
+		elem.lcp = minLcp + 1;
 	} else {
 		elem.lcp = 1;
 	}
@@ -423,34 +435,105 @@ void insertNotFirstL(int index, vector<Bucket>& buckets, Bucket& bucket, vector<
 	bucket.putFront(elem);
 }
 
+void insertNotFirstS(int index, vector<Bucket>& buckets, Bucket& bucket, vector<SuffixType>& types, string& input) {
+	BucketElement elem(index, types.at(index), 0);
+				
+	BucketElement& prev = bucket.elements.at(bucket.tail + 1);
+	int suffixA = elem.suffixIndex + 1;
+	int suffixB = prev.suffixIndex + 1;
+	
+	if (input.at(suffixA) == input.at(suffixB)) {
+		Bucket& bucketForSuffix = getBucket(buckets, input[suffixA]);
+		int indexA = bucketForSuffix.find(suffixA);
+		int indexB = bucketForSuffix.find(suffixB);
+		int begin = 1 + min(indexA, indexB);
+		int end = max(indexA, indexB);
+		int minLcp = 1000000000;
+		for (; begin <= end; begin++) {
+			BucketElement& element = bucketForSuffix.elements.at(begin);
+			if (element.lcp < minLcp) {
+				minLcp = element.lcp;
+			}
+		}
+		elem.lcp = minLcp + 1;
+	} else {
+		elem.lcp = 1;
+	}
+	
+	bucket.putBack(elem);
+}
+
 void updateLSBorder(Bucket& bucket, vector<SuffixType>& types, string& input) {
 	if (bucket.head < (int)bucket.elements.size()) {
-		BucketElement& elemA = bucket.elements[bucket.head-1];
-		BucketElement& elemB = bucket.elements[bucket.head];
-		if (types[elemB.suffixIndex] == S_star) {
+		BucketElement& elemA = bucket.elements.at(bucket.head - 1);
+		BucketElement& elemB = bucket.elements.at(bucket.head);
+		if (elemB.suffixIndex != -1 && types.at(elemB.suffixIndex) == S_star) {
 			int lcpValue = lcp(elemA.suffixIndex, elemB.suffixIndex, input);
 			elemB.lcp = lcpValue;
 		}
 	}
 }
 
+void updateBorder(int position, Bucket& bucket, vector<SuffixType>& types, string& input) {
+	BucketElement& elemA = bucket.elements.at(position);
+	if (position == 0) {
+		elemA.lcp = 0;
+		return;
+	}
+	
+	BucketElement& elemB = bucket.elements.at(position - 1);
+	if (elemB.suffixIndex != -1) {
+		int lcpValue = lcp(elemA.suffixIndex, elemB.suffixIndex, input);
+		elemA.lcp = lcpValue;
+	}
+}
+
 /* 4.2) Inserts L suffixes into buckets and updates lcps. */
-void lastStepL(vector<Bucket>& buckets, vector<Name>& names, vector<SuffixType>& types, string& input) {
-	for (int i = 0; i < (int)names.size(); i++) {
-		Name& name = names[i];
-		int& index = name.index;
-		if (types[index] == L) {
-			Bucket& bucket = getBucket(buckets, input[index]);
-			if (bucket.head == 0) {
-				// there's no L's in this bucket yet
-				BucketElement elem(index, types[index], 0);
-				bucket.putFront(elem);
-			} else {
-				// there are L's in this bucket
-				insertNotFirstL(index, buckets, bucket, types, input);
+void lastStepL(vector<Bucket>& buckets, vector<SuffixType>& types, string& input) {
+	for (int i = 0; i < (int)buckets.size(); i++) {
+		for (int j = 0; j < (int)buckets[i].elements.size(); j++) {
+			int index = buckets[i].elements[j].suffixIndex - 1;
+			if (index >= 0 && types.at(index) == L) {
+				Bucket& bucket = getBucket(buckets, input.at(index));
+				if (bucket.head == 0) {
+					// there's no L's in this bucket yet
+					BucketElement elem(index, L, 0);
+					bucket.putFront(elem);
+				} else {
+					// there are L's in this bucket
+					insertNotFirstL(index, buckets, bucket, types, input);
+				}
+				
+				updateLSBorder(bucket, types, input);
 			}
-			
-			updateLSBorder(bucket, types, input);
+		}
+	}
+}
+
+/* 4.3) Inserts S suffixes into buckets and updates lcps. */
+void lastStepS(vector<Bucket>& buckets, vector<SuffixType>& types, string& input) {
+	for (int i = 0; i < (int)buckets.size(); i++) {
+		buckets[i].resetTailPointer();
+	}
+	
+	for (int i = (int)buckets.size() - 1; i >= 0; i--) {
+		for (int j = (int)buckets.at(i).elements.size() - 1; j >= 0; j--) {
+			BucketElement element = buckets.at(i).elements.at(j);
+			int index = element.suffixIndex - 1;
+			if (index >= 0 && types.at(index) != L) {
+				Bucket& bucket = getBucket(buckets, input.at(index));
+				if (bucket.tail == (int)bucket.elements.size()-1) {
+					// there's no S's in this bucket yet
+					BucketElement elem(index, types.at(index), 0);
+					bucket.putBack(elem);
+					updateBorder(bucket.tail+1, bucket, types, input);
+				} else {
+					// there are S's in this bucket
+					insertNotFirstS(index, buckets, bucket, types, input);
+					updateBorder(bucket.tail+1, bucket, types, input);
+					updateBorder(bucket.tail+2, bucket, types, input);
+				}
+			}
 		}
 	}
 }
@@ -460,7 +543,8 @@ vector<Bucket> calculateLCP(vector<Name>& names, vector<SuffixType>& types, stri
 	vector<Bucket> buckets = createBuckets(input);
 	
 	lastStepSStar(buckets, names, types, input);
-	//lastStepL(buckets, names, types, input);
+	lastStepL(buckets, types, input);
+	lastStepS(buckets, types, input);
 	
 	return buckets;
 }
@@ -473,8 +557,12 @@ void test() {
 	string input = "otorinolaringologija$";
 	//string input = "aralralraralkapalkar$";
 	
-	printf("actual:   "); test2(input);
-	printf("expected: "); bruteForce(input);
+	try {
+		printf("actual:   "); test2(input);
+		printf("expected: "); bruteForce(input);
+	} catch (string e) {
+		printf("Exception: %s\n", e.c_str());
+	}
 }
 
 void test2(string& input) {
@@ -516,9 +604,9 @@ struct SuffixComparator {
 		int j = b;
 		int k = 0;
 		while (i+k < (int)input.length() && j+k < (int)input.length()) {
-			if (input[i+k] < input[j+k]) {
+			if (input.at(i+k) < input.at(j+k)) {
 				return true;
-			} else if (input[i+k] > input[j+k]) {
+			} else if (input.at(i+k) > input.at(j+k)) {
 				return false;
 			}
 			k++;
@@ -533,7 +621,7 @@ int lcp(int a, int b, string& input) {
 	int k = 0;
 	int lcp = 0;
 	while (i+k < (int)input.length() && j+k < (int)input.length()) {
-		if (input[i+k] == input[j+k]) {
+		if (input.at(i+k) == input.at(j+k)) {
 			lcp++;
 		} else {
 			break;
@@ -558,7 +646,7 @@ void bruteForce(string& input) {
 	
 	printf("0 ");
 	for (int i = 1; i < (int)v.size(); i++) {
-		int l = lcp(v[i-1], v[i], input);
+		int l = lcp(v.at(i-1), v.at(i), input);
 		printf("%d ", l);
 	}
 	printf("\n");
