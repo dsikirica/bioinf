@@ -10,12 +10,20 @@ using namespace std;
 
 #define foreach(Type, data) for (vector<Type>::iterator it = data.begin(); it != data.end(); ++it)
 
+//#define LOGGING_ENABLED
+
+#ifdef LOGGING_ENABLED
 void log(const char *format, ...) {
 	va_list args;
 	va_start(args, format);
 	vfprintf(stdout, format, args);
 	va_end(args);
 }
+#else
+void log(const char *format, ...) {
+	
+}
+#endif
 
 /*
  * Enumerates suffix types, L, S, and S*
@@ -147,6 +155,7 @@ struct Name {
 	}
 };
 
+void updateBorder(int position, Bucket& bucket, vector<SuffixType>& types, string& input);
 void updateBorderToLeft(int position, Bucket& bucket, vector<SuffixType>& types, string& input);
 
 /*
@@ -415,6 +424,9 @@ void lastStepSStar(vector<Bucket>& buckets, vector<Name>& names, vector<SuffixTy
 			Bucket& bucket = getBucket(buckets, input.at(i));
 			BucketElement element(i, types.at(i), name.lcp);
 			bucket.putBack(element);
+			if (bucket.tail < (int)bucket.elements.size() - 2) {
+				updateBorder(bucket.tail+2, bucket, types, input);
+			}
 		}
 	}
 }
@@ -432,7 +444,6 @@ void insertNotFirstL(int index, vector<Bucket>& buckets, Bucket& bucket, vector<
 		int indexB = bucketForSuffix.find(suffixB);
 		int begin = 1 + min(indexA, indexB);
 		int end = max(indexA, indexB);
-		log("%d %d %d %d\n", suffixA, suffixB, indexA, indexB);
 		int minLcp = 1000000000;
 		for (; begin <= end; begin++) {
 			BucketElement& element = bucketForSuffix.elements.at(begin);
@@ -595,7 +606,19 @@ vector<Bucket> calculateLCP(vector<Name>& names, vector<SuffixType>& types, stri
 	vector<Bucket> buckets = createBuckets(input);
 	
 	lastStepSStar(buckets, names, types, input);
+	
+	log("==== 4.1) ====\n");
+	foreach(Bucket, buckets) {
+		it->print();
+	}
+	
 	lastStepL(buckets, types, input);
+	
+	log("==== 4.2) ====\n");
+	foreach(Bucket, buckets) {
+		it->print();
+	}
+	
 	lastStepS(buckets, types, input);
 	
 	return buckets;
@@ -604,17 +627,6 @@ vector<Bucket> calculateLCP(vector<Name>& names, vector<SuffixType>& types, stri
 vector<int> bruteForce(string& input);
 void test1();
 vector<int> test2(string&);
-
-string randomString(int minSize, int maxSize) {
-	int size = minSize + (rand() % (maxSize - minSize + 1));
-	
-	string ret = "";
-	for (int i = 0; i < size; i++) {
-		char c = 'a' + (rand() % 4);
-		ret += c;
-	}
-	return ret;
-}
 
 bool areSame(vector<int>& a, vector<int>& b) {
 	if (a.size() != b.size()) {
@@ -631,14 +643,25 @@ bool areSame(vector<int>& a, vector<int>& b) {
 
 void print(vector<int>& v) {
 	for (int i = 0; i < (int)v.size(); i++) {
-		log("%d ", v[i]);
+		printf("%d ", v[i]);
 	}
-	log("\n");
+	printf("\n");
+}
+
+string randomString(int minSize, int maxSize) {
+	int size = minSize + (rand() % (maxSize - minSize + 1));
+	
+	string ret = "";
+	for (int i = 0; i < size; i++) {
+		char c = 'a' + (rand() % 25);
+		ret += c;
+	}
+	return ret;
 }
 
 void batchTest() {
 	const int t = 1000;
-	const int size = 10;
+	const int size = 1000;
 	int correct = 0;
 	int wrongs = 0;
 	srand(time(NULL));
@@ -664,8 +687,8 @@ void batchTest() {
 }
 
 void test() {
-	//batchTest();
-	test1();
+	batchTest();
+	//test1();
 }
 
 vector<int> test2(string& input) {
@@ -673,14 +696,33 @@ vector<int> test2(string& input) {
 	vector<SuffixType> types = createSuffixTypeArray(input);
 	
 	addSStarSuffix(buckets, types, input);
+	
+	log("==== 1. ====\n");
+	foreach(Bucket, buckets) {
+		it->print();
+	}
+	
 	addLSuffixes(buckets, types, input);
+	
+	log("==== 2. ====\n");
+	foreach(Bucket, buckets) {
+		it->print();
+	}
+	
 	addSSuffixes(buckets, types, input);
+	
+	log("==== 3. ====\n");
+	foreach(Bucket, buckets) {
+		it->print();
+	}
+	
 	vector<Name> unsortedNames = getNames(buckets, types, input);
 	vector<Names> categories = getCategories(unsortedNames);
 	vector<Name> names = flatten(categories, input);
 	lcpInitial(names, input);
 	buckets = calculateLCP(names, types, input);
 	
+	log("==== final ====\n");
 	foreach(Bucket, buckets) {
 		it->print();
 	}
