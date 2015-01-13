@@ -660,8 +660,8 @@ string randomString(int minSize, int maxSize) {
 }
 
 void batchTest() {
-	const int t = 1000;
-	const int size = 1000;
+	const int t = 2000;
+	const int size = 500;
 	int correct = 0;
 	int wrongs = 0;
 	srand(time(NULL));
