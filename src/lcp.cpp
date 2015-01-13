@@ -549,23 +549,58 @@ vector<Bucket> calculateLCP(vector<Name>& names, vector<SuffixType>& types, stri
 	return buckets;
 }
 
-void bruteForce(string& input);
+vector<int> bruteForce(string& input);
 void test1(string&);
-void test2(string&);
+vector<int> test2(string&);
 
-void test() {
-	string input = "otorinolaringologija$";
-	//string input = "aralralraralkapalkar$";
+string randomString(int minSize, int maxSize) {
+	int size = minSize + (rand() % (maxSize - minSize + 1));
 	
-	try {
-		printf("actual:   "); test2(input);
-		printf("expected: "); bruteForce(input);
-	} catch (string e) {
-		printf("Exception: %s\n", e.c_str());
+	string ret = "";
+	for (int i = 0; i < size; i++) {
+		char c = 'a' + (rand() % 4);
+		ret += c;
 	}
+	return ret;
 }
 
-void test2(string& input) {
+bool areSame(vector<int>& a, vector<int>& b) {
+	if (a.size() != b.size()) {
+		return false;
+	} else {
+		for (int i = 0; i < (int)a.size(); i++) {
+			if (a[i] != b[i]) {
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
+void batchTest() {
+	const int t = 1000;
+	const int size = 50;
+	int correct = 0;
+	srand(time(NULL));
+	
+	for (int i = 0; i < t; i++) {
+		string input = randomString(size, size) + "$";
+		vector<int> actual = test2(input);
+		vector<int> expected = bruteForce(input);
+		cout << input << endl;
+		if (areSame(actual, expected)) {
+			correct++;
+		}
+	}
+	
+	printf("%d/%d\n", correct, t);
+}
+
+void test() {
+	batchTest();
+}
+
+vector<int> test2(string& input) {
 	vector<Bucket> buckets = createBuckets(input);
 	vector<SuffixType> types = createSuffixTypeArray(input);
 	
@@ -578,20 +613,25 @@ void test2(string& input) {
 	lcpInitial(names, input);
 	buckets = calculateLCP(names, types, input);
 	
+	vector<int> result;
 	for (vector<Bucket>::iterator it = buckets.begin(); it != buckets.end(); ++it) {
-		it->printSeq();
+		for (int i = 0; i < (int)it->elements.size(); i++) {
+			result.push_back(it->elements[i].lcp);
+		}
 	}
-	printf("\n");
+	return result;
 }
 
-void test1(string& input) {
-	vector<SuffixType> types = createSuffixTypeArray(input);
+void test1() {
+	string input = "otorinolaringologija$";
+	//string input = "aralralraralkapalkar$";
 	
-	cout << input << endl;
-	for (vector<SuffixType>::iterator it = types.begin(); it != types.end(); ++it) {
-		printf("%c", *it);
+	try {
+		printf("actual:   "); test2(input);
+		printf("expected: "); bruteForce(input);
+	} catch (string e) {
+		printf("Exception: %s\n", e.c_str());
 	}
-	printf("\n");
 }
 
 struct SuffixComparator {
@@ -634,7 +674,7 @@ int lcp(int a, int b, string& input) {
 /*
  * Brute-force solution, for testing purposes.
  */
-void bruteForce(string& input) {
+vector<int> bruteForce(string& input) {
 	SuffixComparator cmp(input);
 	
 	vector<int> v;
@@ -644,10 +684,11 @@ void bruteForce(string& input) {
 	
 	sort(v.begin(), v.end(), cmp);
 	
-	printf("0 ");
+	vector<int> result;
+	result.push_back(0);
 	for (int i = 1; i < (int)v.size(); i++) {
 		int l = lcp(v.at(i-1), v.at(i), input);
-		printf("%d ", l);
+		result.push_back(l);
 	}
-	printf("\n");
+	return result;
 }
