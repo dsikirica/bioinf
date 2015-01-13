@@ -3,9 +3,19 @@
 #include <string>
 #include <iostream>
 #include <algorithm>
+#include <cstdarg>
 using namespace std;
 
 #include "lcp.h"
+
+#define foreach(Type, data) for (vector<Type>::iterator it = data.begin(); it != data.end(); ++it)
+
+void log(const char *format, ...) {
+	va_list args;
+	va_start(args, format);
+	vfprintf(stdout, format, args);
+	va_end(args);
+}
 
 /*
  * Enumerates suffix types, L, S, and S*
@@ -57,7 +67,7 @@ struct Bucket {
 	Bucket(char _letter, int size, int inputSize) {
 		letter = _letter;
 		elements.resize(size);
-		suffixIndexToElementIndex.resize(inputSize);
+		suffixIndexToElementIndex.resize(inputSize, -1);
 		head = 0;
 		tail = size-1;
 	}
@@ -89,18 +99,18 @@ struct Bucket {
 	}
 	
 	void print() {
-		printf("bucket: %c\n", letter);
+		log("bucket: %c\n", letter);
 		for (vector<BucketElement>::iterator it = elements.begin(); it != elements.end(); ++it) {
-			printf("%d %c\n", it->suffixIndex, it->type);
+			log("%d %c %d\n", it->suffixIndex, it->type, it->lcp);
 		}
 	}
 	
 	void printSeq() {
 		for (vector<BucketElement>::iterator it = elements.begin(); it != elements.end(); ++it) {
 			if (it->lcp < 0) {
-				printf("x ");
+				log("x ");
 			} else {
-				printf("%d ", it->lcp);
+				log("%d ", it->lcp);
 			}
 		}
 	}
@@ -136,6 +146,8 @@ struct Name {
 		return len;
 	}
 };
+
+void updateBorderToLeft(int position, Bucket& bucket, vector<SuffixType>& types, string& input);
 
 /*
  * Calculates lcp of two strings, a and b.
@@ -410,7 +422,7 @@ void lastStepSStar(vector<Bucket>& buckets, vector<Name>& names, vector<SuffixTy
 void insertNotFirstL(int index, vector<Bucket>& buckets, Bucket& bucket, vector<SuffixType>& types, string& input) {
 	BucketElement elem(index, types.at(index), 0);
 				
-	BucketElement& prevL = bucket.elements.at(bucket.head-1);
+	BucketElement& prevL = bucket.elements.at(bucket.head - 1);
 	int suffixA = elem.suffixIndex + 1;
 	int suffixB = prevL.suffixIndex + 1;
 	
@@ -420,10 +432,11 @@ void insertNotFirstL(int index, vector<Bucket>& buckets, Bucket& bucket, vector<
 		int indexB = bucketForSuffix.find(suffixB);
 		int begin = 1 + min(indexA, indexB);
 		int end = max(indexA, indexB);
+		log("%d %d %d %d\n", suffixA, suffixB, indexA, indexB);
 		int minLcp = 1000000000;
 		for (; begin <= end; begin++) {
 			BucketElement& element = bucketForSuffix.elements.at(begin);
-			if (element.lcp < minLcp) {
+			if (element.lcp != -1 && element.lcp < minLcp) {
 				minLcp = element.lcp;
 			}
 		}
@@ -488,6 +501,42 @@ void updateBorder(int position, Bucket& bucket, vector<SuffixType>& types, strin
 	}
 }
 
+void updateBorderToLeft(int position, Bucket& bucket, vector<SuffixType>& types, string& input) {
+	BucketElement& elemA = bucket.elements.at(position);
+	if (position == 0) {
+		elemA.lcp = 0;
+		return;
+	}
+	
+	BucketElement& elemB = bucket.elements.at(position - 1);
+	if (elemB.suffixIndex != -1) {
+		int lcpValue = lcp(elemA.suffixIndex, elemB.suffixIndex, input);
+		elemA.lcp = lcpValue;
+	} else {
+		int index = bucket.head - 1;
+		if (index >= 0) {
+			BucketElement& elemC = bucket.elements.at(index);
+			int lcpValue = lcp(elemA.suffixIndex, elemC.suffixIndex, input);
+			elemA.lcp = lcpValue;
+		}
+	}
+}
+
+void updateBorderToRight(int position, Bucket& bucket, vector<SuffixType>& types, string& input) {
+	BucketElement& elemA = bucket.elements.at(position);
+	if (position == (int)bucket.elements.size() - 1) {
+		elemA.lcp = 0;
+		return;
+	}
+	
+	int index = bucket.tail + 1;
+	if (index < (int)bucket.elements.size()) {
+		BucketElement& elemB = bucket.elements.at(index);
+		int lcpValue = lcp(elemA.suffixIndex, elemB.suffixIndex, input);
+		elemA.lcp = lcpValue;
+	}
+}
+
 /* 4.2) Inserts L suffixes into buckets and updates lcps. */
 void lastStepL(vector<Bucket>& buckets, vector<SuffixType>& types, string& input) {
 	for (int i = 0; i < (int)buckets.size(); i++) {
@@ -504,7 +553,10 @@ void lastStepL(vector<Bucket>& buckets, vector<SuffixType>& types, string& input
 					insertNotFirstL(index, buckets, bucket, types, input);
 				}
 				
-				updateLSBorder(bucket, types, input);
+				//updateLSBorder(bucket, types, input);
+				if (bucket.tail < (int)bucket.elements.size() - 1) {
+					updateBorderToLeft(bucket.tail+1, bucket, types, input);
+				}
 			}
 		}
 	}
@@ -526,12 +578,12 @@ void lastStepS(vector<Bucket>& buckets, vector<SuffixType>& types, string& input
 					// there's no S's in this bucket yet
 					BucketElement elem(index, types.at(index), 0);
 					bucket.putBack(elem);
-					updateBorder(bucket.tail+1, bucket, types, input);
+					updateBorderToLeft(bucket.tail+1, bucket, types, input);
 				} else {
 					// there are S's in this bucket
 					insertNotFirstS(index, buckets, bucket, types, input);
-					updateBorder(bucket.tail+1, bucket, types, input);
-					updateBorder(bucket.tail+2, bucket, types, input);
+					updateBorderToLeft(bucket.tail+1, bucket, types, input);
+					updateBorderToLeft(bucket.tail+2, bucket, types, input);
 				}
 			}
 		}
@@ -550,7 +602,7 @@ vector<Bucket> calculateLCP(vector<Name>& names, vector<SuffixType>& types, stri
 }
 
 vector<int> bruteForce(string& input);
-void test1(string&);
+void test1();
 vector<int> test2(string&);
 
 string randomString(int minSize, int maxSize) {
@@ -577,19 +629,34 @@ bool areSame(vector<int>& a, vector<int>& b) {
 	return true;
 }
 
+void print(vector<int>& v) {
+	for (int i = 0; i < (int)v.size(); i++) {
+		log("%d ", v[i]);
+	}
+	log("\n");
+}
+
 void batchTest() {
 	const int t = 1000;
-	const int size = 50;
+	const int size = 10;
 	int correct = 0;
+	int wrongs = 0;
 	srand(time(NULL));
 	
 	for (int i = 0; i < t; i++) {
 		string input = randomString(size, size) + "$";
 		vector<int> actual = test2(input);
 		vector<int> expected = bruteForce(input);
-		cout << input << endl;
 		if (areSame(actual, expected)) {
 			correct++;
+		} else {
+			wrongs++;
+			cout << input << endl;
+			printf("actual:   "); print(actual);
+			printf("expected: "); print(expected);
+			if (wrongs > 5) {
+				break;
+			}
 		}
 	}
 	
@@ -597,7 +664,8 @@ void batchTest() {
 }
 
 void test() {
-	batchTest();
+	//batchTest();
+	test1();
 }
 
 vector<int> test2(string& input) {
@@ -613,6 +681,10 @@ vector<int> test2(string& input) {
 	lcpInitial(names, input);
 	buckets = calculateLCP(names, types, input);
 	
+	foreach(Bucket, buckets) {
+		it->print();
+	}
+	
 	vector<int> result;
 	for (vector<Bucket>::iterator it = buckets.begin(); it != buckets.end(); ++it) {
 		for (int i = 0; i < (int)it->elements.size(); i++) {
@@ -623,12 +695,14 @@ vector<int> test2(string& input) {
 }
 
 void test1() {
-	string input = "otorinolaringologija$";
-	//string input = "aralralraralkapalkar$";
+	//string input = "otorinolaringologija$";
+	string input = "aaddadadad$";
 	
 	try {
-		printf("actual:   "); test2(input);
-		printf("expected: "); bruteForce(input);
+		vector<int> actual = test2(input);
+		vector<int> expected = bruteForce(input);
+		printf("actual:\n"); print(actual);
+		printf("expected:\n"); print(expected);
 	} catch (string e) {
 		printf("Exception: %s\n", e.c_str());
 	}
