@@ -602,7 +602,7 @@ void LastStepS(vector<Bucket>& buckets, vector<SuffixType>& types, string& input
 }
 
 /* 4. */
-vector<Bucket> CalculateLCP(vector<Name>& names, vector<SuffixType>& types, string& input) {
+vector<Bucket> CalculateLCPStep(vector<Name>& names, vector<SuffixType>& types, string& input) {
   vector<Bucket> buckets = CreateBuckets(input);
   
   LastStepSStar(buckets, names, types, input);
@@ -626,7 +626,6 @@ vector<Bucket> CalculateLCP(vector<Name>& names, vector<SuffixType>& types, stri
 
 vector<int> BruteForce(string& input);
 void Test1();
-vector<int> Test2(string&);
 
 bool AreSame(vector<int>& a, vector<int>& b) {
   if (a.size() != b.size()) {
@@ -661,14 +660,14 @@ string RandomString(int minSize, int maxSize) {
 
 void BatchTest() {
   const int t = 2000;
-  const int size = 500;
+  const int size = 900;
   int correct = 0;
   int wrongs = 0;
   srand(time(NULL));
   
   for (int i = 0; i < t; i++) {
     string input = RandomString(size, size) + "$";
-    vector<int> actual = Test2(input);
+    vector<int> actual = CalculateLCP(input);
     vector<int> expected = BruteForce(input);
     if (AreSame(actual, expected)) {
       correct++;
@@ -686,12 +685,12 @@ void BatchTest() {
   printf("%d/%d\n", correct, t);
 }
 
-void test() {
+void Test() {
   BatchTest();
   //Test1();
 }
 
-vector<int> Test2(string& input) {
+vector<int> CalculateLCP(string& input) {
   vector<Bucket> buckets = CreateBuckets(input);
   vector<SuffixType> types = CreateSuffixTypeArray(input);
   
@@ -720,7 +719,7 @@ vector<int> Test2(string& input) {
   vector<Names> categories = GetCategories(unsorted_names);
   vector<Name> names = Flatten(categories, input);
   LcpInitial(names, input);
-  buckets = CalculateLCP(names, types, input);
+  buckets = CalculateLCPStep(names, types, input);
   
   log("==== final ====\n");
   foreach(Bucket, buckets) {
@@ -741,7 +740,7 @@ void Test1() {
   string input = "aaddadadad$";
   
   try {
-    vector<int> actual = Test2(input);
+    vector<int> actual = CalculateLCP(input);
     vector<int> expected = BruteForce(input);
     printf("actual:\n"); Print(actual);
     printf("expected:\n"); Print(expected);
