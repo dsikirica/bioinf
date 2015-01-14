@@ -808,3 +808,4 @@ vector<int> BruteForce(string& input) {
   }
   return result;
 }
+
