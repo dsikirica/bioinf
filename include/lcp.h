@@ -2,11 +2,13 @@
 #define LCP_H
 
 #include <string>
+#include <vector>
 using std::string;
+using std::vector;
 
 void test();
 
-int lcp(int a, int b, string& input);
-void print(vector<int>& v);
+int Lcp(int a, int b, string& input);
+void Print(vector<int>& v);
 
 #endif
