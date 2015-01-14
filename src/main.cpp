@@ -7,6 +7,10 @@ using namespace std;
 
 #include "lcp.h"
 
+/*
+ * Runs the algorithm on input(1,2,3...).txt files from the specified directory,
+ * and outputs the solutions to the same directory, to output(1,2,3...).txt files.
+ */
 void Run(const char *directory) {
 	int i = 1;
 	char filename[32];
@@ -46,7 +50,7 @@ void Run(const char *directory) {
 }
 
 int main(int argc, char **argv) {
-	//Test();
+	//BatchTest();
 	Run("tests");
 	return 0;
 }

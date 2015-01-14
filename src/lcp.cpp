@@ -13,6 +13,9 @@ using namespace std;
 //#define LOGGING_ENABLED
 
 #ifdef LOGGING_ENABLED
+/*
+ * logs formatted message to stdout
+ */
 void log(const char *format, ...) {
   va_list args;
   va_start(args, format);
@@ -38,7 +41,8 @@ enum SuffixType {
 /*
  * Element of a bucket, contains suffix index, its type and lcp.
  */
-struct BucketElement {
+class BucketElement {
+  public:
   int suffix_index;
   SuffixType type;
   int lcp;
@@ -65,7 +69,8 @@ struct BucketElement {
 /*
  * Container for bucket elements.
  */
-struct Bucket {
+class Bucket {
+  public:
   char letter;
   vector<BucketElement> elements;
   int head, tail;
@@ -80,6 +85,9 @@ struct Bucket {
     tail = size-1;
   }
   
+  /*
+   * Puts a bucket element at the first empty slot from the back.
+   */
   void PutBack(BucketElement element) {
     if (tail < 0) {
       throw string("PutBack: bucket is full");
@@ -89,6 +97,9 @@ struct Bucket {
     tail--;
   }
   
+/*
+ * Puts a bucket element at the first empty slot from the front.
+ */
   void PutFront(BucketElement element) {
     if (head >= (int)elements.size()) {
       throw string("PutFront: bucket is full");
@@ -98,21 +109,33 @@ struct Bucket {
     head++;
   }
   
+/*
+ * Resets the tail pointer.
+ */
   void ResetTailPointer() {
     tail = elements.size() - 1;
   }
   
+/*
+ * Finds and returns the index of the bucket element with this suffix index.
+ */
   int Find(int suffix_index) {
     return suffix_index_to_element_index.at(suffix_index);
   }
-  
+
+/*
+ * Prints the bucket elements of this bucket.
+ */
   void Print() {
     log("bucket: %c\n", letter);
     for (vector<BucketElement>::iterator it = elements.begin(); it != elements.end(); ++it) {
       log("%d %c %d\n", it->suffix_index, it->type, it->lcp);
     }
   }
-  
+
+/*
+ * Prints all of lcp values of this bucket's elements.
+ */
   void PrintSeq() {
     for (vector<BucketElement>::iterator it = elements.begin(); it != elements.end(); ++it) {
       if (it->lcp < 0) {
@@ -128,7 +151,8 @@ struct Bucket {
  * Characteristic name of the suffix.
  * Stores lcp as well.
  */
-struct Name {
+class Name {
+  public:
   int index;
   string name;
   
@@ -140,10 +164,16 @@ struct Name {
     lcp = -1;
   }
   
+/*
+ * Makes a suffix, given the input string.
+ */
   string GetSuffix(string& input) {
     return input.substr(index);
   }
   
+ /*
+ * Calculates suffix lcp.
+ */
   int SuffixLCP(Name& n, string& input) {
     int len = min(name.length(), n.name.length());
     for (int i = 0; i < len; i++) {
@@ -273,9 +303,9 @@ vector<Bucket> CreateBuckets(string& input) {
  * Gets the bucket with the letter 'letter'.
  */
 Bucket& GetBucket(vector<Bucket>& buckets, char letter) {
-  for (vector<Bucket>::iterator it = buckets.begin(); it != buckets.end(); ++it) {
-    if (it->letter == letter) {
-      return *it;
+  for (int i = 0; i < (int)buckets.size(); i++) {
+    if (buckets[i].letter == letter) {
+      return buckets[i];
     }
   }
   string msg = "Could not find bucket with letter ";
@@ -284,7 +314,9 @@ Bucket& GetBucket(vector<Bucket>& buckets, char letter) {
 }
 
 
-/* 2.1) */
+/* Algorithm step 2.1)
+ * - Adding all S* suffixes into buckets
+ *  */
 void AddSStarSuffix(vector<Bucket>& buckets, vector<SuffixType>& types, string& input) {
   for (unsigned int i = 0; i < input.length(); i++) {
     if (types.at(i) == kS_star) {
@@ -295,7 +327,9 @@ void AddSStarSuffix(vector<Bucket>& buckets, vector<SuffixType>& types, string& 
   }
 }
 
-/* 2.2) */
+/* Algorithm step 2.2)
+ * - Adding all L suffixes into buckets
+ * */
 void AddLSuffixes(vector<Bucket>& buckets, vector<SuffixType>& types, string& input) {
   for (unsigned int i = 0; i < buckets.size(); i++) {
     vector<BucketElement>& elements = buckets.at(i).elements;
@@ -314,7 +348,9 @@ void AddLSuffixes(vector<Bucket>& buckets, vector<SuffixType>& types, string& in
   }
 }
 
-/* 2.3) */
+/* Algorithm step 2.3)
+ * - Adding all S suffixes into buckets
+ * */
 void AddSSuffixes(vector<Bucket>& buckets, vector<SuffixType>& types, string& input) {
   for (vector<Bucket>::iterator it = buckets.begin(); it != buckets.end(); ++it) {
     it->ResetTailPointer();
@@ -337,6 +373,9 @@ void AddSSuffixes(vector<Bucket>& buckets, vector<SuffixType>& types, string& in
   }
 }
 
+/*
+ * Returns the characteristic name of the suffix at given index in string.
+ */
 string GetName(int index, string& in, vector<SuffixType> types) {
   string ret;
   ret += in.at(index);
@@ -349,7 +388,9 @@ string GetName(int index, string& in, vector<SuffixType> types) {
   return ret;
 }
 
-/* 3. */
+/* Algorithm step 3.
+ * - Returns characteristic names of all S* suffixes.
+ * */
 vector<Name> GetNames(vector<Bucket>& buckets, vector<SuffixType>& types, string& input) {
   vector<Name> names;
   
@@ -371,7 +412,9 @@ vector<Name> GetNames(vector<Bucket>& buckets, vector<SuffixType>& types, string
 
 typedef vector<Name> Names;
 
-/* 3.1) */
+/* Algorithm step 3.1)
+ * Creates and returns categories which contain names and indicies of S* suffixes.
+ * */
 vector<Names> GetCategories(vector<Name>& names) {
   vector<Names> categories;
   vector<Name> first;
@@ -391,6 +434,9 @@ vector<Names> GetCategories(vector<Name>& names) {
   return categories;
 }
 
+/*
+ * Joins all the names in the category into one array and returns it.
+ */
 vector<Name> Flatten(vector<Names>& categories, string& input) {
   NameComparator name_comparator(input);
   vector<Name> names;
@@ -407,7 +453,10 @@ vector<Name> Flatten(vector<Names>& categories, string& input) {
   return names;
 }
 
-/* 3.2) */
+/* Algorithm step 3.2)
+ * Initial lcp calculations, calculates lcp values between every two
+ * neighbouring names in the list.
+ *  */
 void LcpInitial(vector<Name>& names, string& input) {
   names.at(0).lcp = 0;
   for (int i = 1; i < (int)names.size(); i++) {
@@ -415,7 +464,9 @@ void LcpInitial(vector<Name>& names, string& input) {
   }
 }
 
-/* 4.1) Inserts S* suffixes into buckets. */
+/* Algorithm step 4.1)
+ * - Inserts all S* suffixes into buckets, and updates L/S borders if needed.
+ * */
 void LastStepSStar(vector<Bucket>& buckets, vector<Name>& names, vector<SuffixType>& types, string& input) {
   for (int j = (int)names.size()-1; j >= 0; j--) {
     Name& name = names.at(j);
@@ -431,6 +482,9 @@ void LastStepSStar(vector<Bucket>& buckets, vector<Name>& names, vector<SuffixTy
   }
 }
 
+/*
+ * Inserts an L suffix into a bucket that already contains at least one L suffix.
+ */
 void InsertNotFirstL(int index, vector<Bucket>& buckets, Bucket& bucket, vector<SuffixType>& types, string& input) {
   BucketElement elem(index, types.at(index), 0);
         
@@ -459,6 +513,9 @@ void InsertNotFirstL(int index, vector<Bucket>& buckets, Bucket& bucket, vector<
   bucket.PutFront(elem);
 }
 
+/*
+ * Inserts an S/S* suffix into a bucket that already contains at least one S/S* suffix.
+ */
 void InsertNotFirstS(int index, vector<Bucket>& buckets, Bucket& bucket, vector<SuffixType>& types, string& input) {
   BucketElement elem(index, types.at(index), 0);
         
@@ -487,6 +544,10 @@ void InsertNotFirstS(int index, vector<Bucket>& buckets, Bucket& bucket, vector<
   bucket.PutBack(elem);
 }
 
+/*
+ * Updates border between two neighbouring bucket elements.
+ * This is called only when updating the L/S border.
+ */
 void UpdateLSBorder(Bucket& bucket, vector<SuffixType>& types, string& input) {
   if (bucket.head < (int)bucket.elements.size()) {
     BucketElement& elemA = bucket.elements.at(bucket.head - 1);
@@ -498,6 +559,11 @@ void UpdateLSBorder(Bucket& bucket, vector<SuffixType>& types, string& input) {
   }
 }
 
+/*
+ * Updates border between two bucket elements. They don't have to of
+ * different suffixes, the only requirement is that they are next to
+ * each other.
+ */
 void UpdateBorder(int position, Bucket& bucket, vector<SuffixType>& types, string& input) {
   BucketElement& elemA = bucket.elements.at(position);
   if (position == 0) {
@@ -512,6 +578,10 @@ void UpdateBorder(int position, Bucket& bucket, vector<SuffixType>& types, strin
   }
 }
 
+/*
+ * Updates border between two neighbouring elements. They don't have to
+ * be of different suffix types, and there can be gaps in between them.
+ */
 void UpdateBorderToLeft(int position, Bucket& bucket, vector<SuffixType>& types, string& input) {
   BucketElement& elemA = bucket.elements.at(position);
   if (position == 0) {
@@ -533,22 +603,9 @@ void UpdateBorderToLeft(int position, Bucket& bucket, vector<SuffixType>& types,
   }
 }
 
-void UpdateBorderToRight(int position, Bucket& bucket, vector<SuffixType>& types, string& input) {
-  BucketElement& elemA = bucket.elements.at(position);
-  if (position == (int)bucket.elements.size() - 1) {
-    elemA.lcp = 0;
-    return;
-  }
-  
-  int index = bucket.tail + 1;
-  if (index < (int)bucket.elements.size()) {
-    BucketElement& elemB = bucket.elements.at(index);
-    int lcp_value = Lcp(elemA.suffix_index, elemB.suffix_index, input);
-    elemA.lcp = lcp_value;
-  }
-}
-
-/* 4.2) Inserts kL suffixes into buckets and updates lcps. */
+/* Algorithm step 4.2)
+ * Inserts L suffixes into buckets and updates lcps.
+ * */
 void LastStepL(vector<Bucket>& buckets, vector<SuffixType>& types, string& input) {
   for (int i = 0; i < (int)buckets.size(); i++) {
     for (int j = 0; j < (int)buckets[i].elements.size(); j++) {
@@ -573,7 +630,9 @@ void LastStepL(vector<Bucket>& buckets, vector<SuffixType>& types, string& input
   }
 }
 
-/* 4.3) Inserts kS suffixes into buckets and updates lcps. */
+/* Algorithm step 4.3)
+ * Inserts S/S* suffixes into buckets and updates lcps.
+ * */
 void LastStepS(vector<Bucket>& buckets, vector<SuffixType>& types, string& input) {
   for (int i = 0; i < (int)buckets.size(); i++) {
     buckets[i].ResetTailPointer();
@@ -601,7 +660,11 @@ void LastStepS(vector<Bucket>& buckets, vector<SuffixType>& types, string& input
   }
 }
 
-/* 4. */
+/* Algorithm step 4.
+ * - Performs insertion of L, and S/S* suffixes into buckets, while
+ * updating their lcp values. Returns list of buckets with final lcp
+ * values calculated.
+ * */
 vector<Bucket> CalculateLCPStep(vector<Name>& names, vector<SuffixType>& types, string& input) {
   vector<Bucket> buckets = CreateBuckets(input);
   
@@ -627,6 +690,9 @@ vector<Bucket> CalculateLCPStep(vector<Name>& names, vector<SuffixType>& types, 
 vector<int> BruteForce(string& input);
 void Test1();
 
+/*
+ * Returns true if lists a and b are identical, otherwise false.
+ */
 bool AreSame(vector<int>& a, vector<int>& b) {
   if (a.size() != b.size()) {
     return false;
@@ -640,6 +706,9 @@ bool AreSame(vector<int>& a, vector<int>& b) {
   return true;
 }
 
+/*
+ * Prints out the given vector.
+ */
 void Print(vector<int>& v) {
   for (int i = 0; i < (int)v.size(); i++) {
     printf("%d ", v[i]);
@@ -647,6 +716,10 @@ void Print(vector<int>& v) {
   printf("\n");
 }
 
+/*
+ * Generates and returns a random string whose size is between
+ * minSize and maxSize
+ */
 string RandomString(int minSize, int maxSize) {
   int size = minSize + (rand() % (maxSize - minSize + 1));
   
@@ -658,6 +731,9 @@ string RandomString(int minSize, int maxSize) {
   return ret;
 }
 
+/*
+ * Runs tests with random strings.
+ */
 void BatchTest() {
   const int t = 2000;
   const int size = 900;
@@ -685,11 +761,9 @@ void BatchTest() {
   printf("%d/%d\n", correct, t);
 }
 
-void Test() {
-  BatchTest();
-  //Test1();
-}
-
+/*
+ * 
+ */
 vector<int> CalculateLCP(string& input) {
   vector<Bucket> buckets = CreateBuckets(input);
   vector<SuffixType> types = CreateSuffixTypeArray(input);
@@ -735,9 +809,12 @@ vector<int> CalculateLCP(string& input) {
   return result;
 }
 
+/*
+ * Single input test.
+ */
 void Test1() {
-  //string input = "otorinolaringologija$";
-  string input = "aaddadadad$";
+  string input = "otorinolaringologija$";
+  //string input = "aaddadadad$";
   
   try {
     vector<int> actual = CalculateLCP(input);
@@ -749,6 +826,9 @@ void Test1() {
   }
 }
 
+/*
+ * Comparator for suffixes of string, when only their indicies are given.
+ */
 struct SuffixComparator {
   string& input;
   
@@ -770,6 +850,9 @@ struct SuffixComparator {
   }
 };
 
+/*
+ * Calculates the LCP value between suffixes with indicies a and b.
+ */ 
 int Lcp(int a, int b, string& input) {
   int i = a;
   int j = b;
